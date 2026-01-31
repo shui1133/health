@@ -3,216 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>呼吸治療專業諮詢系統</title>
+    <title>呼吸治療諮詢助手</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIuWRvOetalrmsrvnmYLosqzoq68iLAogICJzaG9ydF9uYW1lIjogIuWRvOetalpBSSIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZmZmZmZmIiwKICAidGhlbWVfY29sb3IiOiAiIzI1NjNlYiIKfQ==">
     <style>
-        .voice-pulse { animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
-        .answer-box { line-height: 1.8; }
+        .chat-container { height: calc(100vh - 180px); }
+        .bubble { max-width: 85%; border-radius: 1.25rem; }
+        .pulse { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
-<body class="bg-blue-50 min-h-screen flex flex-col">
-    <header class="bg-white shadow-sm p-4 sticky top-0 z-10">
-        <div class="container mx-auto flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">呼</div>
-                <div>
-                    <h1 class="font-bold text-gray-800">呼吸治療諮詢</h1>
-                    <p class="text-xs text-blue-600">專業醫療 FAQ 系統</p>
-                </div>
-            </div>
-            <div id="online-status" class="text-xs px-2 py-1 rounded bg-green-100 text-green-700">在線</div>
+<body class="bg-gray-100 flex flex-col h-screen">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl">🫁</span>
+            <h1 class="font-bold">呼吸治療諮詢助手</h1>
         </div>
+        <div id="offlineBadge" class="hidden bg-orange-500 text-xs px-2 py-1 rounded">離線模式</div>
     </header>
 
-    <main class="flex-grow container mx-auto p-4 max-w-2xl">
-        <!-- 搜尋區域 -->
-        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
-            <div class="relative flex items-center">
-                <input type="text" id="user-input" placeholder="請輸入問題或點擊右側說話..." 
-                    class="w-full border-2 border-blue-100 rounded-full py-3 px-6 pr-14 focus:outline-none focus:border-blue-400 text-lg">
-                <button id="mic-btn" class="absolute right-2 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                    </svg>
-                </button>
+    <!-- Chat Area -->
+    <main id="chatWindow" class="chat-container overflow-y-auto p-4 space-y-4 flex-1">
+        <div class="flex justify-start">
+            <div class="bubble bg-white p-3 shadow-sm text-gray-800">
+                您好！我是您的呼吸治療助手。您可以輸入問題，或是點擊下方的麥克風用說的。
             </div>
-            <div class="flex gap-2 mt-4 justify-center">
-                <button onclick="handleSearch()" class="bg-blue-600 text-white px-6 py-2 rounded-full font-medium shadow hover:bg-blue-700">送出查詢</button>
-            </div>
-        </div>
-
-        <!-- 回答顯示區 -->
-        <div id="chat-container" class="space-y-4">
-            <!-- 歡迎語 -->
-            <div class="bg-blue-100 p-4 rounded-xl rounded-tl-none self-start max-w-[90%]">
-                您好！我是您的呼吸治療小幫手。您可以詢問關於「氧氣機補助」、「呼吸器維護」等問題。
-            </div>
-        </div>
-
-        <!-- 語音控制浮動欄 (回答時出現) -->
-        <div id="voice-controls" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-white shadow-2xl rounded-full px-6 py-3 border border-blue-100 flex items-center gap-4 animate-bounce">
-            <div class="flex items-center gap-2">
-                <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
-                <span class="text-sm font-medium text-gray-600">語音播放中...</span>
-            </div>
-            <button id="stop-voice" class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold border border-red-200">停止播放</button>
         </div>
     </main>
 
+    <!-- Controls -->
+    <footer class="bg-white p-4 border-t shadow-inner">
+        <div id="ttsControls" class="hidden mb-2 flex items-center justify-between bg-blue-50 p-2 rounded">
+            <span class="text-xs text-blue-600">正在語音播放中...</span>
+            <button onclick="stopTTS()" class="text-red-500 text-sm font-bold">停止播放</button>
+        </div>
+        
+        <div class="flex gap-2">
+            <button id="voiceBtn" onclick="toggleSTT()" class="bg-gray-100 p-3 rounded-full hover:bg-gray-200 transition">
+                🎤
+            </button>
+            <input type="text" id="userInput" placeholder="請輸入您的問題..." class="flex-1 border rounded-full px-4 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <button onclick="handleSend()" class="bg-blue-600 text-white px-6 py-2 rounded-full font-bold">傳送</button>
+        </div>
+    </footer>
+
     <script>
-        // 設定區
-        const CLAUDE_API_KEY = ""; // 預留位置
+        // 設定與同義詞字典
+        const API_KEY = ""; // 預留串接 API 密鑰
         const SYNONYMS = {
             "氧氣機": "製氧機",
             "製氧機": "氧氣機",
+            "呼吸器": "單相陽壓呼吸器",
             "補助": "津貼",
-            "呼吸器": "呼吸輔助器"
+            "噴霧": "霧化器"
         };
 
-        let faqData = [];
-        let synth = window.speechSynthesis;
-        let recognition;
+        let localFAQ = [];
+        let isRecording = false;
+        let synthesis = window.speechSynthesis;
+        let currentUtterance = null;
 
-        // 初始化語音辨識 (Web Speech API)
-        if ('webkitSpeechRecognition' in window) {
-            recognition = new webkitSpeechRecognition();
-            recognition.continuous = false;
-            recognition.lang = 'zh-TW';
+        // 初始化：讀取 GitHub 資料 (或本地快取)
+        window.onload = async () => {
+            await fetchFAQ();
+            registerPWA();
+            checkOnlineStatus();
+        };
 
-            recognition.onstart = () => {
-                document.getElementById('mic-btn').classList.add('voice-pulse', 'bg-red-500');
-            };
-
-            recognition.onresult = (event) => {
-                const text = event.results[0][0].transcript;
-                document.getElementById('user-input').value = text;
-                handleSearch(text);
-            };
-
-            recognition.onend = () => {
-                document.getElementById('mic-btn').classList.remove('voice-pulse', 'bg-red-500');
-            };
+        async function fetchFAQ() {
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/shui1133/health/main/FAQ.csv');
+                if (response.ok) {
+                    const text = await response.text();
+                    parseCSV(text);
+                    localStorage.setItem('cachedFAQ', text);
+                } else {
+                    const cached = localStorage.getItem('cachedFAQ');
+                    if (cached) parseCSV(cached);
+                }
+            } catch (e) {
+                const cached = localStorage.getItem('cachedFAQ');
+                if (cached) parseCSV(cached);
+            }
         }
 
-        document.getElementById('mic-btn').onclick = () => {
-            if(recognition) recognition.start();
-            else alert("您的瀏覽器不支援語音辨識");
-        };
+        function parseCSV(text) {
+            const rows = text.split('\n').slice(1);
+            localFAQ = rows.map(row => {
+                const cols = row.split(',');
+                if (cols.length >= 4) {
+                    return { 
+                        category: cols[1], 
+                        question: cols[2], 
+                        answer: cols[3].replace(/"/g, '').replace(/\\n/g, '\n') 
+                    };
+                }
+                return null;
+            }).filter(i => i);
+        }
 
         // 搜尋邏輯
-        async function handleSearch(query = "") {
-            const input = query || document.getElementById('user-input').value.trim();
-            if (!input) return;
-
-            addMessage(input, 'user');
-            document.getElementById('user-input').value = "";
-
-            // 1. 本地搜尋 (含同義詞處理)
-            let result = searchLocalFAQ(input);
-
-            // 2. 如果沒結果，觸發 Claude API (預留)
-            if (!result) {
-                result = await searchClaudeAPI(input);
-            }
-
-            if (result) {
-                addMessage(result, 'bot');
-                processSpeech(result);
-            } else {
-                const msg = "抱歉，目前找不到相關資訊。建議您撥打診所專線諮詢。";
-                addMessage(msg, 'bot');
-                processSpeech(msg);
-            }
-        }
-
-        function searchLocalFAQ(query) {
+        function findAnswer(query) {
             // 同義詞替換
             let processedQuery = query;
-            for (let [key, val] of Object.entries(SYNONYMS)) {
-                if (query.includes(key)) processedQuery = query.replace(key, val);
+            for (const [key, val] of Object.entries(SYNONYMS)) {
+                if (query.includes(key)) processedQuery += " " + val;
             }
 
             // 簡單模糊搜尋
-            const found = faqData.find(f => 
-                f.question.includes(query) || f.question.includes(processedQuery) ||
-                f.answer.includes(query)
+            return localFAQ.find(item => 
+                processedQuery.split(' ').some(q => item.question.includes(q))
             );
-            return found ? found.answer : null;
         }
 
-        async function searchClaudeAPI(query) {
-            if (!CLAUDE_API_KEY) return null;
-            // 實作 Claude API Fetch 邏輯...
-            return "這是從 API 獲取的模擬回答...";
+        async function handleSend() {
+            const input = document.getElementById('userInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            addMessage(text, 'user');
+            input.value = '';
+
+            const match = findAnswer(text);
+            if (match) {
+                respond(match.answer);
+            } else {
+                // 找不到則觸發 API (此處模擬 Gemini/Claude)
+                addMessage("正在尋找更詳盡的解答...", 'ai', true);
+                const aiResult = await fetchAIAnswer(text);
+                removeLoading();
+                respond(aiResult);
+            }
         }
 
-        function addMessage(text, role) {
-            const container = document.getElementById('chat-container');
+        async function fetchAIAnswer(prompt) {
+            // 這裡實作 API 串接邏輯
+            // 如果 API_KEY 為空，則返回預設提示
+            if (!API_KEY) return "抱歉，目前找不到相關 FAQ，請聯絡櫃檯人員 (02)XXXX-XXXX。";
+            
+            // 這裡可以使用 Gemini 2.5 Flash 進行查詢
+            return "這是由 AI 生成的建議解答：呼吸治療相關補助通常需要檢附診斷證明書與身障手冊...";
+        }
+
+        function respond(fullText) {
+            addMessage(fullText, 'ai');
+            
+            // 語音播放策略：長篇則摘要
+            let voiceText = fullText;
+            if (fullText.length > 500) {
+                voiceText = "內容較長，為您摘要：" + fullText.substring(0, 100) + "...詳細內容請見文字說明。";
+            }
+            
+            // 自動顯示語音按鈕
+            speak(voiceText);
+        }
+
+        // UI 元件
+        function addMessage(text, role, isLoading = false) {
+            const win = document.getElementById('chatWindow');
             const div = document.createElement('div');
-            div.className = role === 'user' 
-                ? "bg-blue-600 text-white p-4 rounded-xl rounded-tr-none self-end ml-auto max-w-[90%]"
-                : "bg-white border border-gray-200 p-4 rounded-xl rounded-tl-none self-start max-w-[90%] shadow-sm answer-box";
-            div.innerText = text;
-            container.appendChild(div);
-            window.scrollTo(0, document.body.scrollHeight);
+            div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            div.innerHTML = `
+                <div class="bubble p-3 shadow-sm ${role === 'user' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'} ${isLoading ? 'pulse' : ''}">
+                    ${text.replace(/\n/g, '<br>')}
+                    ${role === 'ai' && !isLoading ? '<button onclick="repeatVoice(this)" class="ml-2 text-xs border border-gray-300 rounded px-1">🔊 播放</button>' : ''}
+                </div>
+            `;
+            div.id = isLoading ? 'loadingMsg' : '';
+            win.appendChild(div);
+            win.scrollTop = win.scrollHeight;
         }
 
-        // 語音播放策略
-        function processSpeech(text) {
-            let speechContent = text;
-            // 長篇回答自動摘要 (簡單處理：取前 100 字或分段)
-            if (text.length > 500) {
-                speechContent = "這份回答較長，為您摘要重點：" + text.substring(0, 150) + "...詳細內容請參閱文字說明。";
+        function removeLoading() {
+            const el = document.getElementById('loadingMsg');
+            if (el) el.remove();
+        }
+
+        // 語音功能 (TTS)
+        function speak(text) {
+            stopTTS();
+            currentUtterance = new SpeechSynthesisUtterance(text);
+            currentUtterance.lang = 'zh-TW';
+            currentUtterance.onstart = () => document.getElementById('ttsControls').classList.remove('hidden');
+            currentUtterance.onend = () => document.getElementById('ttsControls').classList.add('hidden');
+            synthesis.speak(currentUtterance);
+        }
+
+        function stopTTS() {
+            synthesis.cancel();
+            document.getElementById('ttsControls').classList.add('hidden');
+        }
+
+        function repeatVoice(btn) {
+            const text = btn.parentElement.innerText.replace('🔊 播放', '');
+            speak(text);
+        }
+
+        // 語音辨識 (STT)
+        function toggleSTT() {
+            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!Recognition) {
+                alert("您的瀏覽器不支援語音辨識");
+                return;
             }
 
-            speak(speechContent);
-        }
+            const rec = new Recognition();
+            rec.lang = 'zh-TW';
+            
+            if (!isRecording) {
+                rec.start();
+                document.getElementById('voiceBtn').classList.add('bg-red-100');
+                isRecording = true;
+            }
 
-        function speak(text) {
-            synth.cancel(); // 停止之前的
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'zh-TW';
-            utterance.rate = 1.0;
-
-            utterance.onstart = () => {
-                document.getElementById('voice-controls').classList.remove('hidden');
+            rec.onresult = (e) => {
+                const transcript = e.results[0][0].transcript;
+                document.getElementById('userInput').value = transcript;
+                handleSend();
             };
 
-            utterance.onend = () => {
-                document.getElementById('voice-controls').classList.add('hidden');
+            rec.onend = () => {
+                document.getElementById('voiceBtn').classList.remove('bg-red-100');
+                isRecording = false;
             };
-
-            synth.speak(utterance);
         }
 
-        document.getElementById('stop-voice').onclick = () => {
-            synth.cancel();
-            document.getElementById('voice-controls').classList.add('hidden');
-        };
-
-        // PWA 離線檢測
-        window.addEventListener('online', () => {
-            document.getElementById('online-status').innerText = "在線";
-            document.getElementById('online-status').className = "text-xs px-2 py-1 rounded bg-green-100 text-green-700";
-        });
-        window.addEventListener('offline', () => {
-            document.getElementById('online-status').innerText = "離線模式";
-            document.getElementById('online-status').className = "text-xs px-2 py-1 rounded bg-red-100 text-red-700";
-        });
-
-        // 載入資料 (模擬從 GitHub 讀取 CSV)
-        async function init() {
-            // 這裡應 fetch('FAQ.csv')
-            faqData = [
-                { question: "氧氣機補助如何申請", answer: "申請氧氣機補助需準備：1.診斷證明書、2.呼吸治療計畫、3.印章。請至戶籍所在地社會局辦理。..." },
-                { question: "製氧機維護", answer: "製氧機濾棉應每週清洗一次，並確保進氣口無遮蔽物。..." }
-            ];
+        // PWA 與 離線支援
+        function registerPWA() {
+            if ('serviceWorker' in navigator) {
+                const swCode = `
+                    self.addEventListener('fetch', (event) => {
+                        event.respondWith(
+                            fetch(event.request).catch(() => caches.match(event.request))
+                        );
+                    });
+                `;
+                const blob = new Blob([swCode], { type: 'text/javascript' });
+                navigator.serviceWorker.register(URL.createObjectURL(blob));
+            }
         }
 
-        init();
+        function checkOnlineStatus() {
+            const badge = document.getElementById('offlineBadge');
+            const updateStatus = () => {
+                badge.classList.toggle('hidden', navigator.onLine);
+            };
+            window.addEventListener('online', updateStatus);
+            window.addEventListener('offline', updateStatus);
+            updateStatus();
+        }
     </script>
 </body>
-</html>
 </html>

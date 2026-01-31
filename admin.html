@@ -3,278 +3,282 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>呼吸治療診所 - 系統管理後台</title>
+    <title>呼吸治療診所 - FAQ 系統管理</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .active-tab { border-bottom: 4px solid #3b82f6; color: #3b82f6; }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
+    <div id="loader" class="loading-overlay">處理中，請稍候...</div>
+
     <nav class="bg-blue-600 text-white p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-xl font-bold">呼吸治療 FAQ 管理系統</h1>
-            <span class="text-sm bg-blue-700 px-3 py-1 rounded">系統管理員模式</span>
+            <div class="space-x-2">
+                <button onclick="saveAllToGitHub()" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded text-sm">儲存至 GitHub</button>
+            </div>
         </div>
     </nav>
 
-    <main class="container mx-auto p-4 md:p-8">
-        <!-- 頁籤切換 -->
-        <div class="flex space-x-8 mb-6 border-b">
-            <button onclick="switchTab('faq')" id="tab-faq" class="pb-2 px-4 active-tab font-medium">FAQ 資料維護</button>
-            <button onclick="switchTab('class')" id="tab-class" class="pb-2 px-4 font-medium text-gray-500">分類管理</button>
-            <button onclick="switchTab('config')" id="tab-config" class="pb-2 px-4 font-medium text-gray-500">GitHub 設定</button>
-        </div>
-
-        <!-- GitHub 設定區塊 (Token 等) -->
-        <section id="section-config" class="hidden bg-white p-6 rounded-lg shadow-md mb-6">
-            <h2 class="text-lg font-bold mb-4">GitHub API 設定</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input type="text" id="gh-token" placeholder="GitHub Personal Access Token" class="border p-2 rounded">
-                <input type="text" id="gh-repo" placeholder="Owner/Repo (例如: user/my-faq-repo)" class="border p-2 rounded">
+    <div class="container mx-auto p-4 lg:p-8">
+        <!-- 分類管理區 -->
+        <section class="mb-8 bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-lg font-semibold mb-4 border-b pb-2">分類管理</h2>
+            <div class="flex flex-wrap gap-2 mb-4" id="categoryContainer">
+                <!-- Categories will appear here -->
             </div>
-            <p class="text-xs text-gray-500 mt-2">* 此資訊僅存於瀏覽器 LocalStorage，用於儲存 CSV 到 GitHub。</p>
-        </section>
-
-        <!-- FAQ 資料維護 -->
-        <section id="section-faq">
-            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                <div class="flex flex-wrap gap-4 items-center justify-between mb-4">
-                    <div class="flex gap-2">
-                        <input type="file" id="csv-upload" accept=".csv" class="hidden" onchange="handleFileUpload(event)">
-                        <button onclick="document.getElementById('csv-upload').click()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">上傳 CSV</button>
-                        <button onclick="addNewFAQ()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">新增 FAQ</button>
-                    </div>
-                    <button onclick="saveToGitHub('faq')" class="bg-orange-500 text-white px-6 py-2 rounded font-bold hover:bg-orange-600 transition">儲存至 GitHub (FAQ.csv)</button>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-100">
-                                <th class="p-3 border">項次</th>
-                                <th class="p-3 border">分類</th>
-                                <th class="p-3 border">問題說明</th>
-                                <th class="p-3 border">答案內容</th>
-                                <th class="p-3 border">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="faq-list">
-                            <!-- JS 動態插入 -->
-                        </tbody>
-                    </table>
-                </div>
+            <div class="flex gap-2">
+                <input type="text" id="newCategory" placeholder="新分類名稱" class="border p-2 rounded flex-1">
+                <button onclick="addCategory()" class="bg-blue-500 text-white px-4 py-2 rounded">新增分類</button>
             </div>
         </section>
 
-        <!-- 分類管理 -->
-        <section id="section-class" class="hidden">
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                <div class="flex gap-2 mb-4">
-                    <input type="text" id="new-class-name" placeholder="輸入新分類名稱" class="border p-2 rounded flex-grow">
-                    <button onclick="addClass()" class="bg-blue-600 text-white px-4 py-2 rounded">新增分類</button>
-                    <button onclick="saveToGitHub('class')" class="bg-orange-500 text-white px-4 py-2 rounded">儲存至 GitHub (class.csv)</button>
+        <!-- FAQ 管理區 -->
+        <section class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 class="text-lg font-semibold">FAQ 內容管理</h2>
+                <div class="flex gap-2">
+                    <input type="file" id="csvInput" accept=".csv" class="hidden" onchange="importCSV(this)">
+                    <button onclick="document.getElementById('csvInput').click()" class="text-blue-600 border border-blue-600 px-3 py-1 rounded text-sm">匯入 CSV</button>
+                    <button onclick="openModal()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">+ 新增 FAQ</button>
                 </div>
-                <ul id="class-list" class="divide-y border rounded">
-                    <!-- JS 動態插入 -->
-                </ul>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="p-3 border">項次</th>
+                            <th class="p-3 border">分類</th>
+                            <th class="p-3 border">問題說明</th>
+                            <th class="p-3 border">答案內容</th>
+                            <th class="p-3 border">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="faqTableBody">
+                        <!-- FAQ Data -->
+                    </tbody>
+                </table>
             </div>
         </section>
-    </main>
+    </div>
 
-    <!-- 編輯 Modal -->
-    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4">
+    <!-- Edit Modal -->
+    <div id="faqModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center p-4">
         <div class="bg-white rounded-lg w-full max-w-2xl p-6">
-            <h3 class="text-xl font-bold mb-4" id="modal-title">編輯 FAQ</h3>
+            <h3 id="modalTitle" class="text-xl font-bold mb-4">新增/修改 FAQ</h3>
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium">分類</label>
-                    <select id="edit-category" class="w-full border p-2 rounded"></select>
+                    <select id="editCategory" class="w-full border p-2 rounded"></select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium">問題說明</label>
-                    <input type="text" id="edit-question" class="w-full border p-2 rounded">
+                    <input type="text" id="editQuestion" class="w-full border p-2 rounded">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium">答案內容 (建議 300-500 字)</label>
-                    <textarea id="edit-answer" rows="8" class="w-full border p-2 rounded"></textarea>
+                    <label class="block text-sm font-medium">答案內容</label>
+                    <textarea id="editAnswer" rows="6" class="w-full border p-2 rounded"></textarea>
                 </div>
             </div>
-            <div class="flex justify-end gap-2 mt-6">
+            <div class="mt-6 flex justify-end gap-2">
                 <button onclick="closeModal()" class="px-4 py-2 border rounded">取消</button>
-                <button onclick="saveFAQ()" class="px-4 py-2 bg-blue-600 text-white rounded">確定儲存</button>
+                <button onclick="saveFAQ()" class="px-4 py-2 bg-blue-600 text-white rounded">確認儲存</button>
             </div>
         </div>
     </div>
 
     <script>
-        let faqs = [];
-        let classes = ["健保補助", "儀器操作", "診所資訊", "日常護理"];
-        let currentEditIndex = -1;
+        const CONFIG = {
+            username: 'shui1133',
+            repo: 'health',
+            token: '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',
+            faqPath: 'FAQ.csv',
+            classPath: 'class.csv'
+        };
+
+        let faqData = [];
+        let categories = ["補助申請", "氧氣設備", "呼吸復健", "一般諮詢"];
+        let editIndex = -1;
 
         // 初始化
         window.onload = () => {
-            loadConfig();
+            renderCategories();
             renderFAQ();
-            renderClasses();
         };
 
-        function switchTab(tab) {
-            ['faq', 'class', 'config'].forEach(t => {
-                document.getElementById(`section-${t}`).classList.add('hidden');
-                document.getElementById(`tab-${t}`).classList.remove('active-tab');
-                document.getElementById(`tab-${t}`).classList.add('text-gray-500');
+        function renderCategories() {
+            const container = document.getElementById('categoryContainer');
+            const select = document.getElementById('editCategory');
+            container.innerHTML = '';
+            select.innerHTML = '';
+            
+            categories.forEach((cat, idx) => {
+                container.innerHTML += `
+                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2">
+                        ${cat}
+                        <button onclick="deleteCategory(${idx})" class="text-red-500 font-bold">&times;</button>
+                    </span>
+                `;
+                select.innerHTML += `<option value="${cat}">${cat}</option>`;
             });
-            document.getElementById(`section-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).classList.add('active-tab');
-            document.getElementById(`tab-${tab}`).classList.remove('text-gray-500');
         }
 
-        // CSV 處理邏輯
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
+        function addCategory() {
+            const input = document.getElementById('newCategory');
+            if (input.value.trim()) {
+                categories.push(input.value.trim());
+                input.value = '';
+                renderCategories();
+            }
+        }
+
+        function deleteCategory(index) {
+            categories.splice(index, 1);
+            renderCategories();
+        }
+
+        function renderFAQ() {
+            const tbody = document.getElementById('faqTableBody');
+            tbody.innerHTML = '';
+            faqData.forEach((item, idx) => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-3 border">${idx + 1}</td>
+                        <td class="p-3 border">${item.category}</td>
+                        <td class="p-3 border font-medium">${item.question}</td>
+                        <td class="p-3 border text-gray-600 text-sm">${item.answer.substring(0, 50)}...</td>
+                        <td class="p-3 border">
+                            <button onclick="openModal(${idx})" class="text-blue-600 mr-2">修改</button>
+                            <button onclick="deleteFAQ(${idx})" class="text-red-600">刪除</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openModal(index = -1) {
+            editIndex = index;
+            document.getElementById('faqModal').classList.remove('hidden');
+            if (index > -1) {
+                const item = faqData[index];
+                document.getElementById('editCategory').value = item.category;
+                document.getElementById('editQuestion').value = item.question;
+                document.getElementById('editAnswer').value = item.answer;
+            } else {
+                document.getElementById('editQuestion').value = '';
+                document.getElementById('editAnswer').value = '';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('faqModal').classList.add('hidden');
+        }
+
+        function saveFAQ() {
+            const newItem = {
+                category: document.getElementById('editCategory').value,
+                question: document.getElementById('editQuestion').value,
+                answer: document.getElementById('editAnswer').value
+            };
+
+            if (editIndex > -1) {
+                faqData[editIndex] = newItem;
+            } else {
+                faqData.push(newItem);
+            }
+            renderFAQ();
+            closeModal();
+        }
+
+        function deleteFAQ(index) {
+            if (confirm('確定要刪除此項次嗎？')) {
+                faqData.splice(index, 1);
+                renderFAQ();
+            }
+        }
+
+        function importCSV(input) {
+            const file = input.files[0];
             const reader = new FileReader();
             reader.onload = (e) => {
                 const text = e.target.result;
-                const rows = text.split('\n').slice(1); // 跳過標頭
-                faqs = rows.filter(r => r.trim()).map((row, idx) => {
+                const rows = text.split('\n').slice(1);
+                const imported = rows.map(row => {
                     const cols = row.split(',');
-                    return { id: idx + 1, category: cols[1], question: cols[2], answer: cols[3]?.replace(/\\n/g, '\n') };
-                });
+                    if (cols.length >= 3) {
+                        return { category: cols[1], question: cols[2], answer: cols[3]?.replace(/"/g, '') || '' };
+                    }
+                    return null;
+                }).filter(i => i);
+                faqData = [...faqData, ...imported];
                 renderFAQ();
             };
             reader.readAsText(file);
         }
 
-        function renderFAQ() {
-            const tbody = document.getElementById('faq-list');
-            tbody.innerHTML = faqs.map((f, i) => `
-                <tr class="hover:bg-gray-50">
-                    <td class="p-3 border text-center">${i + 1}</td>
-                    <td class="p-3 border">${f.category}</td>
-                    <td class="p-3 border font-medium">${f.question}</td>
-                    <td class="p-3 border text-gray-600 text-sm">${f.answer.substring(0, 50)}...</td>
-                    <td class="p-3 border">
-                        <button onclick="editFAQ(${i})" class="text-blue-600 mr-2">修改</button>
-                        <button onclick="deleteFAQ(${i})" class="text-red-600">刪除</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
+        async function saveAllToGitHub() {
+            document.getElementById('loader').style.display = 'flex';
+            try {
+                // 1. Save FAQ.csv
+                const faqCsv = "項次,分類,問題說明,答案內容\n" + 
+                    faqData.map((d, i) => `${i+1},${d.category},${d.question},"${d.answer.replace(/"/g, '""')}"`).join('\n');
+                await uploadToGitHub(CONFIG.faqPath, faqCsv);
 
-        function addNewFAQ() {
-            currentEditIndex = -1;
-            document.getElementById('modal-title').innerText = "新增 FAQ";
-            document.getElementById('edit-question').value = "";
-            document.getElementById('edit-answer').value = "";
-            updateCategorySelect();
-            document.getElementById('modal').classList.remove('hidden');
-        }
+                // 2. Save class.csv
+                const classCsv = "分類\n" + categories.join('\n');
+                await uploadToGitHub(CONFIG.classPath, classCsv);
 
-        function editFAQ(index) {
-            currentEditIndex = index;
-            const f = faqs[index];
-            document.getElementById('modal-title').innerText = "修改 FAQ";
-            document.getElementById('edit-question').value = f.question;
-            document.getElementById('edit-answer').value = f.answer;
-            updateCategorySelect(f.category);
-            document.getElementById('modal').classList.remove('hidden');
-        }
-
-        function updateCategorySelect(selected = "") {
-            const select = document.getElementById('edit-category');
-            select.innerHTML = classes.map(c => `<option value="${c}" ${c===selected?'selected':''}>${c}</option>`).join('');
-        }
-
-        function saveFAQ() {
-            const f = {
-                category: document.getElementById('edit-category').value,
-                question: document.getElementById('edit-question').value,
-                answer: document.getElementById('edit-answer').value
-            };
-            if (currentEditIndex === -1) {
-                faqs.push({ ...f, id: faqs.length + 1 });
-            } else {
-                faqs[currentEditIndex] = { ...faqs[currentEditIndex], ...f };
-            }
-            closeModal();
-            renderFAQ();
-        }
-
-        function deleteFAQ(index) {
-            if(confirm("確定刪除此題？")) {
-                faqs.splice(index, 1);
-                renderFAQ();
+                alert('資料已成功同步至 GitHub！');
+            } catch (err) {
+                console.error(err);
+                alert('儲存失敗，請檢查 Token 或網路狀態。');
+            } finally {
+                document.getElementById('loader').style.display = 'none';
             }
         }
 
-        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
-
-        // 分類管理邏輯
-        function renderClasses() {
-            const list = document.getElementById('class-list');
-            list.innerHTML = classes.map((c, i) => `
-                <li class="p-3 flex justify-between items-center bg-white">
-                    <span>${c}</span>
-                    <div>
-                        <button onclick="renameClass(${i})" class="text-blue-500 mr-3 text-sm">重新命名</button>
-                        <button onclick="deleteClass(${i})" class="text-red-500 text-sm">刪除</button>
-                    </div>
-                </li>
-            `).join('');
-        }
-
-        function addClass() {
-            const name = document.getElementById('new-class-name').value.trim();
-            if (name) {
-                classes.push(name);
-                document.getElementById('new-class-name').value = "";
-                renderClasses();
-            }
-        }
-
-        function deleteClass(index) {
-            classes.splice(index, 1);
-            renderClasses();
-        }
-
-        function renameClass(index) {
-            const newName = prompt("請輸入新名稱", classes[index]);
-            if(newName) {
-                classes[index] = newName;
-                renderClasses();
-            }
-        }
-
-        // GitHub 同步邏輯 (模擬)
-        async function saveToGitHub(type) {
-            const token = document.getElementById('gh-token').value;
-            const repo = document.getElementById('gh-repo').value;
-            if(!token || !repo) {
-                alert("請先在『GitHub 設定』頁籤填寫 Token 與 Repo 資訊。");
-                switchTab('config');
-                return;
-            }
-
-            const fileName = type === 'faq' ? 'FAQ.csv' : 'class.csv';
-            let content = "";
-            if(type === 'faq') {
-                content = "項次,分類,問題說明,答案內容\n" + faqs.map(f => `${f.id},${f.category},${f.question},${f.answer.replace(/\n/g, '\\n')}`).join('\n');
-            } else {
-                content = "分類名稱\n" + classes.join('\n');
-            }
-
-            // 實作提示：這裡應調用 GitHub API (PUT /repos/{owner}/{repo}/contents/{path})
-            alert(`已準備好 ${fileName} 資料。\n實務上將透過 GitHub API 提交至 ${repo}。\n(目前為展示模式，請確認 console 查看 CSV 內容)`);
-            console.log(content);
+        async function uploadToGitHub(path, content) {
+            const url = `https://api.github.com/repos/${CONFIG.username}/${CONFIG.repo}/contents/${path}`;
             
-            // 儲存設定
-            localStorage.setItem('gh-token', token);
-            localStorage.setItem('gh-repo', repo);
-        }
+            // 先獲取檔案 sha (如果檔案已存在)
+            let sha = "";
+            try {
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `token ${CONFIG.token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    sha = data.sha;
+                }
+            } catch (e) {}
 
-        function loadConfig() {
-            document.getElementById('gh-token').value = localStorage.getItem('gh-token') || "";
-            document.getElementById('gh-repo').value = localStorage.getItem('gh-repo') || "";
+            const body = {
+                message: `Update ${path} via Admin Web`,
+                content: btoa(unescape(encodeURIComponent(content))),
+                sha: sha || undefined
+            };
+
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${CONFIG.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) throw new Error('GitHub API Error');
         }
     </script>
 </body>
