@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>呼吸治療診所 - FAQ 管理後台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="gradient-bg text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center">
+                <span class="mr-2">🏥</span> 專業呼吸治療診所管理系統
+            </h1>
+            <div class="space-x-4">
+                <button onclick="switchTab('faq')" class="hover:underline">FAQ 管理</button>
+                <button onclick="switchTab('class')" class="hover:underline">分類管理</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 mt-6">
+        <!-- 分類管理區塊 -->
+        <section id="class-section" class="hidden">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4 text-blue-800">分類欄位管理</h2>
+                <div class="flex gap-2 mb-6">
+                    <input id="new-class" type="text" placeholder="輸入新分類名稱" class="border rounded px-4 py-2 w-full">
+                    <button onclick="addClass()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">新增</button>
+                </div>
+                <div id="class-list" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <!-- 分類標籤會在這裡動態生成 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ 管理區塊 -->
+        <section id="faq-section">
+            <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+                    <h2 class="text-2xl font-semibold text-blue-800">FAQ 資料維護</h2>
+                    <div class="flex gap-2">
+                        <input type="file" id="csv-upload" accept=".csv" class="hidden" onchange="handleCSVUpload(event)">
+                        <button onclick="document.getElementById('csv-upload').click()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">匯入 CSV</button>
+                        <button onclick="exportData()" class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">儲存並下載 CSV</button>
+                    </div>
+                </div>
+
+                <!-- 手工輸入表單 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 border rounded-lg bg-blue-50">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">分類</label>
+                        <select id="faq-category" class="w-full border rounded p-2"></select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">問題說明</label>
+                        <input id="faq-question" type="text" class="w-full border rounded p-2">
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium text-gray-700">答案內容 (300-500字)</label>
+                        <textarea id="faq-answer" rows="4" class="w-full border rounded p-2"></textarea>
+                    </div>
+                    <div class="md:col-span-3 flex justify-end">
+                        <button id="save-btn" onclick="addFAQ()" class="bg-blue-800 text-white px-8 py-2 rounded hover:bg-blue-900 transition">新增 FAQ</button>
+                    </div>
+                </div>
+
+                <!-- FAQ 列表 -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 border-b">
+                                <th class="p-3 text-sm font-semibold text-gray-600">項次</th>
+                                <th class="p-3 text-sm font-semibold text-gray-600">分類</th>
+                                <th class="p-3 text-sm font-semibold text-gray-600">問題</th>
+                                <th class="p-3 text-sm font-semibold text-gray-600">答案摘要</th>
+                                <th class="p-3 text-sm font-semibold text-gray-600">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="faq-table-body">
+                            <!-- 資料行將在這裡動態生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let faqs = JSON.parse(localStorage.getItem('faqs')) || [];
+        let categories = JSON.parse(localStorage.getItem('categories')) || ["補助政策", "設備使用", "呼吸照護", "門診資訊"];
+        let editIndex = -1;
+
+        function renderAll() {
+            renderCategories();
+            renderFAQs();
+        }
+
+        function switchTab(tab) {
+            document.getElementById('faq-section').classList.toggle('hidden', tab !== 'faq');
+            document.getElementById('class-section').classList.toggle('hidden', tab !== 'class');
+        }
+
+        // 分類管理邏輯
+        function renderCategories() {
+            const list = document.getElementById('class-list');
+            const select = document.getElementById('faq-category');
+            list.innerHTML = '';
+            select.innerHTML = '';
+            categories.forEach((cat, index) => {
+                list.innerHTML += `
+                    <div class="flex justify-between items-center bg-gray-100 p-2 rounded">
+                        <span>${cat}</span>
+                        <button onclick="deleteCategory(${index})" class="text-red-500 hover:text-red-700">✕</button>
+                    </div>`;
+                select.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+            localStorage.setItem('categories', JSON.stringify(categories));
+        }
+
+        function addClass() {
+            const input = document.getElementById('new-class');
+            if (input.value.trim()) {
+                categories.push(input.value.trim());
+                input.value = '';
+                renderCategories();
+            }
+        }
+
+        function deleteCategory(index) {
+            categories.splice(index, 1);
+            renderCategories();
+        }
+
+        // FAQ 管理邏輯
+        function renderFAQs() {
+            const tbody = document.getElementById('faq-table-body');
+            tbody.innerHTML = '';
+            faqs.forEach((item, index) => {
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3">${index + 1}</td>
+                        <td class="p-3"><span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">${item.category}</span></td>
+                        <td class="p-3 font-medium">${item.question}</td>
+                        <td class="p-3 text-gray-500 truncate max-w-xs">${item.answer.substring(0, 30)}...</td>
+                        <td class="p-3 space-x-2">
+                            <button onclick="editFAQ(${index})" class="text-blue-600 hover:underline">修改</button>
+                            <button onclick="deleteFAQ(${index})" class="text-red-600 hover:underline">刪除</button>
+                        </td>
+                    </tr>`;
+            });
+            localStorage.setItem('faqs', JSON.stringify(faqs));
+        }
+
+        function addFAQ() {
+            const category = document.getElementById('faq-category').value;
+            const question = document.getElementById('faq-question').value;
+            const answer = document.getElementById('faq-answer').value;
+
+            if (!question || !answer) {
+                alert("請完整填寫問題與答案內容");
+                return;
+            }
+
+            if (editIndex > -1) {
+                faqs[editIndex] = { category, question, answer };
+                editIndex = -1;
+                document.getElementById('save-btn').innerText = "新增 FAQ";
+            } else {
+                faqs.push({ category, question, answer });
+            }
+
+            document.getElementById('faq-question').value = '';
+            document.getElementById('faq-answer').value = '';
+            renderFAQs();
+        }
+
+        function editFAQ(index) {
+            editIndex = index;
+            const item = faqs[index];
+            document.getElementById('faq-category').value = item.category;
+            document.getElementById('faq-question').value = item.question;
+            document.getElementById('faq-answer').value = item.answer;
+            document.getElementById('save-btn').innerText = "更新 FAQ";
+            window.scrollTo(0, 0);
+        }
+
+        function deleteFAQ(index) {
+            if (confirm("確定要刪除這筆資料嗎？")) {
+                faqs.splice(index, 1);
+                renderFAQs();
+            }
+        }
+
+        // CSV 處理
+        function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const rows = text.split('\n').slice(1);
+                rows.forEach(row => {
+                    const cols = row.split(',');
+                    if (cols.length >= 3) {
+                        faqs.push({
+                            category: cols[1].trim(),
+                            question: cols[2].trim(),
+                            answer: cols[3] ? cols[3].trim() : ""
+                        });
+                    }
+                });
+                renderFAQs();
+                alert("匯入成功！");
+            };
+            reader.readAsText(file);
+        }
+
+        function exportData() {
+            // 下載 FAQ.csv
+            let faqCSV = "項次,分類,問題,答案\n" + faqs.map((f, i) => `${i+1},${f.category},${f.question},"${f.answer.replace(/"/g, '""')}"`).join('\n');
+            downloadCSV(faqCSV, 'FAQ.csv');
+
+            // 下載 class.csv
+            let classCSV = "分類名稱\n" + categories.join('\n');
+            downloadCSV(classCSV, 'class.csv');
+            
+            alert("資料已儲存並產生下載檔案 (FAQ.csv, class.csv)");
+        }
+
+        function downloadCSV(csvContent, fileName) {
+            const encodedUri = encodeURI("data:text/csv;charset=utf-8,\uFEFF" + csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        window.onload = renderAll;
+    </script>
+</body>
+</html>
