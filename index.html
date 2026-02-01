@@ -3,220 +3,892 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>百樂居家呼吸照護所 - 語音智慧助手</title>
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIueZvuWoguWxiuWutuaRreWQveeFp+ittOaJgCIsCiAgInNob3J0X25hbWUiIjogIueZvuWoguWRvOmAmiIsCiAgInN0YXJ0X3VybCI6ICIuLmluZGV4Lmh0bWwiLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmZmZmZmYiLAogICJ0aGVtZV9jb2xvciI6ICIjMWQ0ZWRmIgp9">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="theme-color" content="#2563eb">
+    <title>百樂居家呼吸照護所 - FAQ 查詢系統</title>
+    
+    <!-- PWA 支援 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="百樂FAQ">
+    
     <style>
-        .chat-bubble { max-width: 85%; }
-        .recording { animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.6s;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.95;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            animation: fadeInUp 0.6s;
+        }
+
+        .api-key-section {
+            background: #fff3cd;
+            border-bottom: 2px solid #ffc107;
+            padding: 15px 20px;
+        }
+
+        .api-key-section.hidden {
+            display: none;
+        }
+
+        .api-key-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .api-key-input input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .api-key-input button {
+            padding: 10px 20px;
+            background: #ffc107;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .api-key-input button:hover {
+            background: #ffb300;
+        }
+
+        .messages {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            background: var(--bg-main);
+        }
+
+        .message {
+            margin-bottom: 16px;
+            animation: messageSlideIn 0.3s;
+        }
+
+        @keyframes messageSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-user {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message-assistant {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            line-height: 1.6;
+        }
+
+        .message-user .message-content {
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-assistant .message-content {
+            background: white;
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+            box-shadow: var(--shadow);
+        }
+
+        .message-assistant .message-content .source-tag {
+            display: inline-block;
+            background: #e0e7ff;
+            color: #4338ca;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-top: 8px;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            padding: 20px;
+            background: white;
+            border-top: 1px solid var(--border);
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        #userInput {
+            width: 100%;
+            padding: 14px 50px 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            resize: none;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        #userInput:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .voice-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .voice-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .voice-btn.recording {
+            background: var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .send-btn {
+            padding: 14px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .send-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .send-btn:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            padding: 0 20px 20px;
+            background: white;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid var(--border);
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .control-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: flex;
+            gap: 8px;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            max-width: 100px;
+        }
+
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: loadingDot 1.4s infinite ease-in-out both;
+        }
+
+        .loading-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .loading-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes loadingDot {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .messages {
+                height: 400px;
+            }
+
+            .message-content {
+                max-width: 90%;
+            }
+
+            .input-area {
+                flex-direction: column;
+            }
+
+            .send-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* 滾動條樣式 */
+        .messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .messages::-webkit-scrollbar-track {
+            background: var(--bg-main);
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .messages::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
     </style>
 </head>
-<body class="bg-gray-100 h-screen flex flex-col">
-    <!-- Header -->
-    <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
-        <h1 class="text-lg font-bold">百樂居家呼吸助手</h1>
-        <div id="online-status" class="text-xs bg-green-500 px-2 py-1 rounded">在線</div>
-    </header>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 百樂居家呼吸照護所</h1>
+            <p>健保醫療及補助諮詢系統</p>
+        </div>
 
-    <!-- 訊息顯示區 -->
-    <main id="chat-container" class="flex-grow overflow-y-auto p-4 space-y-4">
-        <div class="flex justify-start">
-            <div class="bg-white p-3 rounded-lg shadow-sm chat-bubble">
-                您好！我是百樂小助手。您可以輸入文字或點擊下方麥克風對我說話，詢問健保補助或儀器使用問題。
+        <div class="chat-container">
+            <div id="apiKeySection" class="api-key-section">
+                <p style="margin-bottom: 10px; font-size: 14px; color: #856404;">
+                    <strong>💡 提示：</strong>若FAQ無法回答您的問題，將使用 Claude API 提供更詳細的協助
+                </p>
+                <div class="api-key-input">
+                    <input 
+                        type="password" 
+                        id="apiKeyInput" 
+                        placeholder="請輸入您的 Claude API Key（選填，僅在FAQ無答案時使用）"
+                    >
+                    <button onclick="saveApiKey()">儲存</button>
+                </div>
+            </div>
+
+            <div id="messages" class="messages">
+                <div class="empty-state">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                    <h3>歡迎使用諮詢系統</h3>
+                    <p>您可以輸入問題或點擊麥克風使用語音提問</p>
+                </div>
+            </div>
+
+            <div class="control-buttons">
+                <button class="control-btn" id="speakBtn" onclick="speakLastAnswer()" disabled>
+                    🔊 語音播放最後回答
+                </button>
+                <button class="control-btn" id="stopSpeakBtn" onclick="stopSpeaking()" disabled>
+                    ⏹️ 停止語音
+                </button>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="userInput" 
+                        rows="1" 
+                        placeholder="請輸入您的問題..."
+                        onkeypress="handleKeyPress(event)"
+                    ></textarea>
+                    <button class="voice-btn" id="voiceBtn" onclick="toggleVoiceInput()" title="語音輸入">
+                        🎤
+                    </button>
+                </div>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                    <span>傳送</span>
+                    <span>➤</span>
+                </button>
             </div>
         </div>
-    </main>
-
-    <!-- 控制面板 -->
-    <footer class="bg-white p-4 border-t">
-        <div id="summary-notice" class="hidden text-xs text-orange-600 mb-2">※ 答案較長，已自動為您播放摘要。</div>
-        
-        <div class="flex items-center space-x-2">
-            <button id="mic-btn" class="bg-blue-100 p-3 rounded-full text-blue-600 hover:bg-blue-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-            </button>
-            <input type="text" id="user-input" placeholder="請輸入問題..." class="flex-grow border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <button id="send-btn" class="bg-blue-600 text-white p-2 rounded-full px-4">傳送</button>
-        </div>
-
-        <div class="flex justify-center mt-3 space-x-4">
-            <button id="speak-last" class="text-sm bg-gray-100 px-3 py-1 rounded border hover:bg-gray-200">🔊 重播語音</button>
-            <button id="stop-speak" class="text-sm bg-red-50 px-3 py-1 rounded border border-red-200 text-red-600 hover:bg-red-100">⏹ 停止播放</button>
-        </div>
-    </footer>
+    </div>
 
     <script>
-        // 設定與資料
-        const CLAUDE_API_KEY = ""; // 預留位置
-        const GITHUB_RAW_BASE = "https://raw.githubusercontent.com/shui1133/health/main/";
-        const SYNONYMS = {
-            "氧氣機": "製氧機",
-            "呼吸器": "單陽壓呼吸輔助器",
-            "補助": "費用說明"
-        };
-
+        // 全域變數
         let faqData = [];
-        let lastAnswer = "";
+        let messages = [];
+        let lastAnswer = '';
+        let recognition = null;
+        let isRecording = false;
+        let synthesis = window.speechSynthesis;
+        let currentUtterance = null;
+        let apiKey = '';
 
-        // 語音組件
-        const recognition = window.SpeechRecognition || window.webkitSpeechRecognition ? new (window.SpeechRecognition || window.webkitSpeechRecognition)() : null;
-        if(recognition) {
-            recognition.lang = 'zh-TW';
-            recognition.continuous = false;
-        }
-
-        const synth = window.speechSynthesis;
-
-        window.onload = async () => {
-            await fetchFAQ();
-            setupEventListeners();
-            checkOffline();
+        // GitHub 設定
+        const GITHUB_CONFIG = {
+            username: 'shui1133',
+            repo: 'health',
+            faqFile: 'FAQ.csv'
         };
 
-        async function fetchFAQ() {
+        // 頁面載入時執行
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFAQFromGitHub();
+            initSpeechRecognition();
+            loadApiKey();
+            adjustTextareaHeight();
+        });
+
+        // 自動調整 textarea 高度
+        document.getElementById('userInput').addEventListener('input', adjustTextareaHeight);
+
+        function adjustTextareaHeight() {
+            const textarea = document.getElementById('userInput');
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+
+        // 載入 API Key
+        function loadApiKey() {
+            const saved = localStorage.getItem('claudeApiKey');
+            if (saved) {
+                apiKey = saved;
+                document.getElementById('apiKeySection').classList.add('hidden');
+            }
+        }
+
+        // 儲存 API Key
+        function saveApiKey() {
+            const input = document.getElementById('apiKeyInput');
+            if (input.value.trim()) {
+                apiKey = input.value.trim();
+                localStorage.setItem('claudeApiKey', apiKey);
+                document.getElementById('apiKeySection').classList.add('hidden');
+                addMessage('系統', 'API Key 已儲存，現在可以在 FAQ 無答案時使用 Claude AI 協助回答！', 'assistant');
+            }
+        }
+
+        // 從 GitHub 載入 FAQ
+        async function loadFAQFromGitHub() {
             try {
-                // 嘗試從 GitHub 抓取最新 CSV
-                const res = await fetch(GITHUB_RAW_BASE + "FAQ.csv");
-                const text = await res.text();
-                parseCSV(text);
-            } catch (e) {
-                console.error("無法載入線上 FAQ，檢查離線快取");
+                const response = await fetch(
+                    `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.faqFile}`
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const csvContent = atob(data.content);
+                    parseFAQCSV(csvContent);
+                } else {
+                    console.error('無法載入 FAQ 資料');
+                }
+            } catch (error) {
+                console.error('載入 FAQ 錯誤:', error);
             }
         }
 
-        function parseCSV(text) {
-            const lines = text.split('\n');
-            faqData = lines.slice(1).filter(l => l.trim() !== '').map(line => {
-                const parts = line.split(',');
-                return {
-                    question: parts[2],
-                    answer: parts.slice(3).join(',').replace(/^"|"$/g, '')
-                };
-            });
-        }
-
-        function setupEventListeners() {
-            document.getElementById('send-btn').onclick = () => handleSearch(document.getElementById('user-input').value);
-            document.getElementById('user-input').onkeypress = (e) => { if(e.key === 'Enter') handleSearch(e.target.value); };
+        // 解析 FAQ CSV
+        function parseFAQCSV(csvContent) {
+            const lines = csvContent.split('\n').filter(line => line.trim());
+            faqData = [];
             
-            if(recognition) {
-                document.getElementById('mic-btn').onclick = () => {
-                    recognition.start();
-                    document.getElementById('mic-btn').classList.add('recording');
-                };
-                recognition.onresult = (e) => {
-                    const transcript = e.results[0][0].transcript;
-                    document.getElementById('user-input').value = transcript;
-                    handleSearch(transcript);
-                };
-                recognition.onend = () => document.getElementById('mic-btn').classList.remove('recording');
+            for (let i = 1; i < lines.length; i++) {
+                const columns = parseCSVLine(lines[i]);
+                if (columns.length >= 4) {
+                    faqData.push({
+                        no: columns[0],
+                        category: columns[1],
+                        question: columns[2],
+                        answer: columns[3]
+                    });
+                }
             }
-
-            document.getElementById('speak-last').onclick = () => speakText(lastAnswer);
-            document.getElementById('stop-speak').onclick = () => synth.cancel();
+            
+            console.log(`已載入 ${faqData.length} 筆 FAQ 資料`);
         }
 
-        function handleSearch(query) {
-            if(!query.trim()) return;
-            appendMsg(query, 'user');
-            document.getElementById('user-input').value = '';
-
-            // 同義詞轉換
-            let processedQuery = query;
-            for(let key in SYNONYMS) {
-                if(query.includes(key)) processedQuery = query.replace(key, SYNONYMS[key]);
-            }
-
-            // 優先找 FAQ
-            const match = faqData.find(item => item.question.includes(processedQuery) || processedQuery.includes(item.question));
+        // 解析 CSV 行
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
             
-            if(match) {
-                showResponse(match.answer);
-            } else {
-                callClaudeAPI(query);
-            }
-        }
-
-        async function callClaudeAPI(query) {
-            appendMsg("正在搜尋進一步資訊...", 'bot-loading');
-            
-            // 此處為將來串接 Claude API 的邏輯
-            // 由於目前無 Key，模擬一個回覆
-            setTimeout(() => {
-                const botLoading = document.querySelector('.bot-loading');
-                if(botLoading) botLoading.remove();
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
                 
-                const fallbackMsg = "在目前 FAQ 中找不到完全相符的答案。建議您聯繫診所個管師進一步諮詢，或撥打 (02)XXXX-XXXX。";
-                showResponse(fallbackMsg);
-            }, 1000);
-        }
-
-        function showResponse(text) {
-            lastAnswer = text;
-            appendMsg(text, 'bot');
-            
-            // 語音播放策略：超過 500 字則摘要 (這裡簡單取前 50 字作為摘要演示)
-            let speakContent = text;
-            if(text.length > 500) {
-                speakContent = "答案內容較長，為您節錄重點：" + text.substring(0, 100) + "...詳細內容請見螢幕顯示。";
-                document.getElementById('summary-notice').classList.remove('hidden');
-            } else {
-                document.getElementById('summary-notice').classList.add('hidden');
+                if (char === '"') {
+                    if (inQuotes && line[i + 1] === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
             }
-            speakText(speakContent);
+            
+            result.push(current.trim());
+            return result;
         }
 
-        function appendMsg(text, sender) {
-            const container = document.getElementById('chat-container');
-            const div = document.createElement('div');
-            div.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'} ${sender === 'bot-loading' ? 'bot-loading' : ''}`;
-            div.innerHTML = `
-                <div class="${sender === 'user' ? 'bg-blue-500 text-white' : 'bg-white text-gray-800'} p-3 rounded-lg shadow-sm chat-bubble">
-                    ${text}
+        // 初始化語音辨識
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'zh-TW';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('userInput').value = transcript;
+                    adjustTextareaHeight();
+                    stopRecording();
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('語音辨識錯誤:', event.error);
+                    stopRecording();
+                    if (event.error === 'no-speech') {
+                        addMessage('系統', '沒有偵測到語音，請再試一次', 'assistant');
+                    }
+                };
+
+                recognition.onend = () => {
+                    stopRecording();
+                };
+            } else {
+                console.log('瀏覽器不支援語音辨識');
+            }
+        }
+
+        // 切換語音輸入
+        function toggleVoiceInput() {
+            if (!recognition) {
+                alert('您的瀏覽器不支援語音辨識功能');
+                return;
+            }
+
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                recognition.start();
+                isRecording = true;
+                document.getElementById('voiceBtn').classList.add('recording');
+                document.getElementById('voiceBtn').innerHTML = '⏹️';
+            }
+        }
+
+        // 停止錄音
+        function stopRecording() {
+            isRecording = false;
+            document.getElementById('voiceBtn').classList.remove('recording');
+            document.getElementById('voiceBtn').innerHTML = '🎤';
+        }
+
+        // 處理 Enter 鍵
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // 傳送訊息
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const question = input.value.trim();
+            
+            if (!question) return;
+
+            // 顯示使用者訊息
+            addMessage('您', question, 'user');
+            input.value = '';
+            adjustTextareaHeight();
+
+            // 顯示載入動畫
+            showLoading();
+
+            // 搜尋 FAQ
+            const faqAnswer = searchFAQ(question);
+
+            if (faqAnswer) {
+                hideLoading();
+                addMessage('系統', faqAnswer, 'assistant', 'FAQ 資料庫');
+                lastAnswer = faqAnswer;
+                enableSpeakButton();
+            } else {
+                // FAQ 找不到答案，嘗試使用 Claude API
+                if (apiKey) {
+                    await askClaudeAPI(question);
+                } else {
+                    hideLoading();
+                    const noAnswerMsg = '抱歉，FAQ 資料庫中找不到相關答案。您可以輸入 Claude API Key 以獲得更詳細的協助，或重新描述您的問題。';
+                    addMessage('系統', noAnswerMsg, 'assistant', '系統提示');
+                    lastAnswer = noAnswerMsg;
+                    enableSpeakButton();
+                }
+            }
+        }
+
+        // 搜尋 FAQ
+        function searchFAQ(question) {
+            const normalizedQuestion = question.toLowerCase().trim();
+            
+            // 完全匹配
+            for (let faq of faqData) {
+                if (faq.question.toLowerCase().includes(normalizedQuestion) ||
+                    normalizedQuestion.includes(faq.question.toLowerCase())) {
+                    return faq.answer;
+                }
+            }
+
+            // 關鍵字匹配
+            const keywords = normalizedQuestion.split(/\s+/);
+            let bestMatch = null;
+            let maxScore = 0;
+
+            for (let faq of faqData) {
+                let score = 0;
+                const faqText = (faq.question + ' ' + faq.category).toLowerCase();
+                
+                keywords.forEach(keyword => {
+                    if (keyword.length > 1 && faqText.includes(keyword)) {
+                        score++;
+                    }
+                });
+
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestMatch = faq;
+                }
+            }
+
+            return maxScore >= 2 ? bestMatch.answer : null;
+        }
+
+        // 使用 Claude API
+        async function askClaudeAPI(question) {
+            try {
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 1000,
+                        messages: [{
+                            role: 'user',
+                            content: `你是百樂居家呼吸照護所的醫療諮詢助理。請用繁體中文回答以下關於健保醫療及補助的問題。請提供專業、準確且易懂的答案。
+
+問題：${question}
+
+注意：請以溫和、專業的語氣回答，並在必要時建議諮詢專業醫療人員。`
+                        }]
+                    })
+                });
+
+                hideLoading();
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const answer = data.content[0].text;
+                    addMessage('AI 助理', answer, 'assistant', 'Claude AI');
+                    lastAnswer = answer;
+                    enableSpeakButton();
+                } else {
+                    throw new Error('API 請求失敗');
+                }
+            } catch (error) {
+                hideLoading();
+                console.error('Claude API 錯誤:', error);
+                const errorMsg = 'AI 回答時發生錯誤，請稍後再試或聯繫系統管理員。';
+                addMessage('系統', errorMsg, 'assistant', '錯誤訊息');
+                lastAnswer = errorMsg;
+                enableSpeakButton();
+            }
+        }
+
+        // 新增訊息
+        function addMessage(sender, content, type, source = '') {
+            const messagesDiv = document.getElementById('messages');
+            const emptyState = messagesDiv.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${type}`;
+            
+            let sourceTag = source ? `<div class="source-tag">📚 ${source}</div>` : '';
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    ${content.replace(/\n/g, '<br>')}
+                    ${sourceTag}
                 </div>
             `;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            messages.push({ sender, content, type, source });
         }
 
-        function speakText(text) {
-            synth.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'zh-TW';
-            utterance.rate = 1.0;
-            synth.speak(utterance);
-        }
-
-        function checkOffline() {
-            window.addEventListener('online', () => updateStatus(true));
-            window.addEventListener('offline', () => updateStatus(false));
-        }
-
-        function updateStatus(isOnline) {
-            const status = document.getElementById('online-status');
-            status.innerText = isOnline ? '在線' : '離線模式';
-            status.className = `text-xs px-2 py-1 rounded ${isOnline ? 'bg-green-500' : 'bg-orange-500'}`;
-        }
-    </script>
-
-    <!-- 簡易 Service Worker 註冊 -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            const swCode = `
-                const CACHE_NAME = 'baile-v1';
-                self.addEventListener('install', e => {
-                    e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['./index.html'])));
-                });
-                self.addEventListener('fetch', e => {
-                    e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
-                });
+        // 顯示載入動畫
+        function showLoading() {
+            const messagesDiv = document.getElementById('messages');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message message-assistant';
+            loadingDiv.id = 'loadingMessage';
+            loadingDiv.innerHTML = `
+                <div class="loading">
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                </div>
             `;
-            const blob = new Blob([swCode], {type: 'text/javascript'});
-            navigator.serviceWorker.register(URL.createObjectURL(blob));
+            messagesDiv.appendChild(loadingDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // 隱藏載入動畫
+        function hideLoading() {
+            const loadingMessage = document.getElementById('loadingMessage');
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+        }
+
+        // 啟用語音播放按鈕
+        function enableSpeakButton() {
+            document.getElementById('speakBtn').disabled = false;
+        }
+
+        // 語音播放最後回答
+        function speakLastAnswer() {
+            if (!lastAnswer) {
+                addMessage('系統', '目前沒有可播放的回答', 'assistant');
+                return;
+            }
+
+            // 停止當前播放
+            stopSpeaking();
+
+            // 長篇回答產生摘要
+            let textToSpeak = lastAnswer;
+            if (lastAnswer.length > 500) {
+                textToSpeak = lastAnswer.substring(0, 500) + '...（答案較長，完整內容請查看上方訊息）';
+            }
+
+            currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
+            currentUtterance.lang = 'zh-TW';
+            currentUtterance.rate = 0.9;
+            currentUtterance.pitch = 1;
+
+            currentUtterance.onstart = () => {
+                document.getElementById('stopSpeakBtn').disabled = false;
+                document.getElementById('speakBtn').disabled = true;
+            };
+
+            currentUtterance.onend = () => {
+                document.getElementById('stopSpeakBtn').disabled = true;
+                document.getElementById('speakBtn').disabled = false;
+                currentUtterance = null;
+            };
+
+            synthesis.speak(currentUtterance);
+        }
+
+        // 停止語音播放
+        function stopSpeaking() {
+            if (synthesis.speaking) {
+                synthesis.cancel();
+            }
+            document.getElementById('stopSpeakBtn').disabled = true;
+            document.getElementById('speakBtn').disabled = false;
+            currentUtterance = null;
+        }
+
+        // Service Worker 註冊（PWA 支援）
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => {
+                console.log('Service Worker 註冊失敗:', err);
+            });
         }
     </script>
 </body>
