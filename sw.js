@@ -1,64 +1,20 @@
-const CACHE_NAME = 'baileh-faq-v1';
+const CACHE_NAME = 'bailer-respiratory-v1';
 const urlsToCache = [
-  '/index.html',
-  '/manifest.json'
+  './index.html',
+  'https://cdn.tailwindcss.com',
+  'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js'
 ];
 
-// 安裝 Service Worker
-self.addEventListener('install', (event) => {
+self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('快取已開啟');
-        return cache.addAll(urlsToCache);
-      })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
 });
 
-// 快取並返回請求
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // 快取命中 - 返回快取內容
-        if (response) {
-          return response;
-        }
-
-        return fetch(event.request).then(
-          (response) => {
-            // 檢查是否為有效回應
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // 複製回應
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          }
-        );
-      })
-  );
-});
-
-// 更新 Service Worker
-self.addEventListener('activate', (event) => {
-  const cacheWhitelist = [CACHE_NAME];
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
     })
   );
 });
